@@ -24,7 +24,7 @@ if not exist ".claude.json" (
 
 REM Step 2: Start the container in detached mode
 echo [2/4] Starting container in detached mode...
-docker-compose up -d
+docker-compose up -d --remove-orphans
 
 if %errorlevel% neq 0 (
     echo ERROR: Failed to start container
