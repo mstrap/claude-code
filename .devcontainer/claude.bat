@@ -3,10 +3,9 @@ echo ================================================
 echo Setting up Claude Code Docker environment...
 echo ================================================
 
-REM Step 0: Clean up any existing containers with the same name
-echo [0/3] Cleaning up existing containers...
-docker stop claude-code-dev 2>nul
-docker rm claude-code-dev 2>nul
+REM Step 0: Generate a unique container name
+set "CLAUDE_CONTAINER_NAME=claude-code-dev-%RANDOM%"
+echo [0/3] Preparing new container %CLAUDE_CONTAINER_NAME%...
 
 REM Step 1: Build the Docker image
 echo [1/3] Building Docker image...
@@ -20,7 +19,7 @@ if %errorlevel% neq 0 (
 
 REM Ensure .claude.json exists (Windows equivalent of Unix 'touch')
 if not exist ".claude.json" (
-    type nul > ".claude.json"
+    echo {} > ".claude.json"
 )
 
 REM Step 2: Start the container in detached mode
@@ -50,7 +49,7 @@ echo ================================================
 echo.
 
 REM Enter the container interactively
-docker exec -it claude-code-dev bash
+docker exec -it %CLAUDE_CONTAINER_NAME% bash
 
 REM After exiting the container
 echo.
@@ -58,7 +57,7 @@ echo ================================================
 echo You've exited the Claude Code container.
 echo The container is still running in the background.
 echo.
-echo To re-enter: docker exec -it claude-code-dev bash
-echo To stop: docker-compose down
+echo To re-enter: docker exec -it %CLAUDE_CONTAINER_NAME% bash
+echo To stop: docker stop %CLAUDE_CONTAINER_NAME%
 echo ================================================
 pause
