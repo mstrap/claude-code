@@ -79,4 +79,7 @@ RUN chmod +x /usr/local/bin/init-firewall.sh && \
 RUN passwd -l root
 
 COPY validate-setup.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/validate-setup.sh \
+ && printf '\nif [ -z "${VALIDATE_SETUP_DONE:-}" ] && [ -x /usr/local/bin/validate-setup.sh ]; then\n  /usr/local/bin/validate-setup.sh || true\n  export VALIDATE_SETUP_DONE=1\nfi\n' >> /root/.bashrc \
+ && printf '\nif [ -z "${VALIDATE_SETUP_DONE:-}" ] && [ -x /usr/local/bin/validate-setup.sh ]; then\n  /usr/local/bin/validate-setup.sh || true\n  export VALIDATE_SETUP_DONE=1\nfi\n' >> /home/node/.bashrc
 USER node
