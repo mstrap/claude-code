@@ -26,10 +26,17 @@ fi
 echo "[2/4] Starting container in detached mode..."
 CLAUDE_CONTAINER_NAME="$CLAUDE_CONTAINER_NAME" docker-compose -f "$SCRIPT_DIR/docker-compose.yml" up -d
 
-# Step 3: Wait for firewall initialization
+# Step 3: Wait for firewall initialization with timeout
 echo "[3/4] Waiting for firewall to initialize..."
-until docker exec "$CLAUDE_CONTAINER_NAME" bash -c "test -f /tmp/firewall.ready" >/dev/null 2>&1; do
+WAIT_SECS=60
+elapsed=0
+while ! docker exec "$CLAUDE_CONTAINER_NAME" bash -c "test -f /tmp/firewall.ready" >/dev/null 2>&1; do
+  if [ "$elapsed" -ge "$WAIT_SECS" ]; then
+    echo "WARNING: Firewall did not signal readiness after ${WAIT_SECS}s. Continuing..."
+    break
+  fi
   sleep 1
+  elapsed=$((elapsed+1))
 done
 
 # Step 4: Enter the container

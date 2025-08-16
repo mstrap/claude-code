@@ -2,6 +2,15 @@
 set -euo pipefail  # Exit on error, undefined vars, and pipeline failures
 IFS=$'\n\t'       # Stricter word splitting
 
+# Always create readiness marker even if something fails
+trap 'touch /tmp/firewall.ready' EXIT
+
+# If not running as root, skip firewall setup but still signal readiness
+if [[ "$EUID" -ne 0 ]]; then
+    echo "Firewall init: not running as root, skipping firewall configuration"
+    exit 0
+fi
+
 # 1. Extract Docker DNS info BEFORE any flushing
 DOCKER_DNS_RULES=$(iptables-save -t nat | grep "127\.0\.0\.11" || true)
 
@@ -102,6 +111,3 @@ if ! curl --connect-timeout 5 https://api.anthropic.com >/dev/null 2>&1; then
 else
     echo "Firewall verification passed - able to reach https://api.anthropic.com as expected"
 fi
-
-# Signal that firewall setup is complete
-touch /tmp/firewall.ready
