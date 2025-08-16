@@ -2,10 +2,10 @@ services:
   claude-code:
     build:
       context: .
-      dockerfile: .devcontainer/Dockerfile
+      dockerfile: Dockerfile
     container_name: claude-code-dev
     volumes:
-      - .:/workspace
+      - ..:/workspace
       - /var/run/docker.sock:/var/run/docker.sock
       - .claude:/home/node/.claude
       - .claude.json:/home/node/.claude.json
