@@ -12,7 +12,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   procps \
   sudo \
   fzf \
-  zsh \
   man-db \
   unzip \
   gnupg2 \
@@ -51,7 +50,7 @@ WORKDIR /workspace
 ARG GIT_DELTA_VERSION=0.18.2
 RUN ARCH=$(dpkg --print-architecture) && \
   wget "https://github.com/dandavison/delta/releases/download/${GIT_DELTA_VERSION}/git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
-  sudo dpkg -i "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
+  dpkg -i "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
   rm "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb"
 
 # Set up non-root user
@@ -61,26 +60,13 @@ USER node
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
 ENV PATH=$PATH:/usr/local/share/npm-global/bin
 
-# Set the default shell to zsh rather than sh
-ENV SHELL=/bin/zsh
-
-# Set the default editor and visual
-ENV EDITOR nano
-ENV VISUAL nano
-
-# Default powerline10k theme
-ARG ZSH_IN_DOCKER_VERSION=1.2.0
-RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/v${ZSH_IN_DOCKER_VERSION}/zsh-in-docker.sh)" -- \
-  -p git \
-  -p fzf \
-  -a "source /usr/share/doc/fzf/examples/key-bindings.zsh" \
-  -a "source /usr/share/doc/fzf/examples/completion.zsh" \
-  -a "export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
-  -x
+# Use bash as the default shell and editor
+ENV SHELL=/bin/bash
+ENV EDITOR=nano
+ENV VISUAL=nano
 
 # Install Claude
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
-
 
 # Copy and set up firewall script
 COPY init-firewall.sh /usr/local/bin/
@@ -88,4 +74,9 @@ USER root
 RUN chmod +x /usr/local/bin/init-firewall.sh && \
   echo "node ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/node-firewall && \
   chmod 0440 /etc/sudoers.d/node-firewall
+
+# Disable direct login to the root account
+RUN passwd -l root
+
+COPY validate-setup.sh /usr/local/bin/
 USER node
