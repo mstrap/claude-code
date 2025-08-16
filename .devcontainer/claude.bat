@@ -32,13 +32,20 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-REM Step 3: Wait for firewall initialization
+REM Step 3: Wait for firewall initialization with timeout
 echo [3/4] Waiting for firewall to initialize...
+set WAIT_SECS=60
+set /a WAITED=0
 :wait_firewall
 docker exec %CLAUDE_CONTAINER_NAME% bash -c "test -f /tmp/firewall.ready" >nul 2>&1
 if %errorlevel% neq 0 (
-    timeout /t 1 >nul
-    goto wait_firewall
+    if %WAITED% GEQ %WAIT_SECS% (
+        echo WARNING: Firewall did not signal readiness after %WAIT_SECS%s. Continuing...
+    ) else (
+        timeout /t 1 >nul
+        set /a WAITED+=1
+        goto wait_firewall
+    )
 )
 
 REM Step 4: Enter the container
