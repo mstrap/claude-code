@@ -1,0 +1,23 @@
+services:
+  claude-code:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    container_name: claude-code-dev
+    volumes:
+      - .:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .claude:/home/node/.claude
+      - .claude.json:/home/node/.claude.json
+    working_dir: /workspace
+    tty: true
+    stdin_open: true
+    environment:
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+      - "4000:4000"
+      - "5000:5000"
+      - "8080:8080"
+    restart: unless-stopped
+    command: tail -f /dev/null
