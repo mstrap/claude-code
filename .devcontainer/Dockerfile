@@ -10,7 +10,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   less \
   git \
   procps \
-  sudo \
   fzf \
   man-db \
   unzip \
@@ -48,7 +47,7 @@ WORKDIR /workspace
 ARG GIT_DELTA_VERSION=0.18.2
 RUN ARCH=$(dpkg --print-architecture) && \
   wget "https://github.com/dandavison/delta/releases/download/${GIT_DELTA_VERSION}/git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
-  sudo dpkg -i "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
+  dpkg -i "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
   rm "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb"
 
 # Set up non-root user
@@ -66,14 +65,17 @@ ENV VISUAL=nano
 # Install Claude
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
-# Copy and set up firewall script and expose claude binary
-COPY init-firewall.sh /usr/local/bin/
+# Copy firewall and entrypoint scripts, expose claude binary
+COPY init-firewall.sh docker-entrypoint.sh /usr/local/bin/
 USER root
-RUN chmod +x /usr/local/bin/init-firewall.sh && \
-  echo "node ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/node-firewall && \
-  chmod 0440 /etc/sudoers.d/node-firewall && \
+RUN chmod +x /usr/local/bin/init-firewall.sh /usr/local/bin/docker-entrypoint.sh && \
   ln -sf /usr/local/share/npm-global/bin/claude /usr/local/bin/claude
-USER node
 
-# Default command launches bash
+# Disable root access by removing setuid from su and locking root
+RUN chmod u-s /usr/bin/su && \
+    passwd -l root && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Run firewall on container start then drop to node
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["bash"]
