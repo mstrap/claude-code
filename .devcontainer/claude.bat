@@ -32,23 +32,17 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-REM Step 3: Wait for firewall initialization with timeout
-echo [3/4] Waiting for firewall to initialize...
-set WAIT_SECS=60
-set /a WAITED=0
-:wait_firewall
-docker exec %CLAUDE_CONTAINER_NAME% bash -c "test -f /tmp/firewall.ready" >nul 2>&1
+REM Step 3: Configure firewall and remove su/sudo access
+echo [3/4] Configuring firewall...
+docker-compose exec claude-code bash -lc "sudo /workspace/.devcontainer/init-firewall.sh && sudo passwd -l root && sudo chmod u-s /usr/bin/su /usr/bin/sudo"
+
 if %errorlevel% neq 0 (
-    if %WAITED% GEQ %WAIT_SECS% (
-        echo WARNING: Firewall did not signal readiness after %WAIT_SECS%s. Continuing...
-    ) else (
-        timeout /t 1 >nul
-        set /a WAITED+=1
-        goto wait_firewall
-    )
+    echo ERROR: Failed to configure firewall
+    pause
+    exit /b 1
 )
 
-REM Step 4: Enter the container
+REM Step 4: Enter the container (validation will run first)
 echo.
 echo [4/4] Setup complete! Entering container...
 echo.
@@ -64,8 +58,8 @@ echo   exit                     - Leave container
 echo ================================================
 echo.
 
-REM Enter the container interactively
-docker exec -it %CLAUDE_CONTAINER_NAME% bash
+REM Enter the container interactively and run validation script
+docker-compose exec claude-code bash -lc "/workspace/.devcontainer/validate-setup.sh && bash"
 
 REM After exiting the container
 echo.
@@ -73,7 +67,7 @@ echo ================================================
 echo You've exited the Claude Code container.
 echo The container is still running in the background.
 echo.
-echo To re-enter: docker exec -it %CLAUDE_CONTAINER_NAME% bash
-echo To stop: docker stop %CLAUDE_CONTAINER_NAME%
+echo To re-enter: docker-compose exec claude-code bash
+echo To stop: docker-compose stop claude-code
 echo ================================================
 pause

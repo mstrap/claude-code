@@ -5,7 +5,7 @@ ENV TZ="$TZ"
 
 ARG CLAUDE_CODE_VERSION=latest
 
-# Install basic development tools
+# Install basic development tools and enable passwordless sudo for node
 RUN apt-get update && apt-get install -y --no-install-recommends \
   less \
   git \
@@ -19,8 +19,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   iproute2 \
   dnsutils \
   jq \
+  sudo \
   nano \
   vim \
+  && echo 'node ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/node \
+  && chmod 0440 /etc/sudoers.d/node \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Ensure default node user has access to /usr/local/share
@@ -65,17 +68,12 @@ ENV VISUAL=nano
 # Install Claude
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
-# Copy firewall and entrypoint scripts, expose claude binary
-COPY init-firewall.sh docker-entrypoint.sh /usr/local/bin/
+# Expose claude binary
 USER root
-RUN chmod +x /usr/local/bin/init-firewall.sh /usr/local/bin/docker-entrypoint.sh && \
-  ln -sf /usr/local/share/npm-global/bin/claude /usr/local/bin/claude
+RUN ln -sf /usr/local/share/npm-global/bin/claude /usr/local/bin/claude
 
-# Disable root access by removing setuid from su and locking root
-RUN chmod u-s /usr/bin/su && \
-    passwd -l root && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# Default to non-root user
+USER node
 
-# Run firewall on container start then drop to node
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+# Start bash by default
 CMD ["bash"]
